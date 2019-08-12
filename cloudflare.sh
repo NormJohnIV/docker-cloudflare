@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Enforces required env variables
-required_vars=(ZONE HOST EMAIL API)
+required_vars=(ZONE HOST TOKEN)
 for required_var in "${required_vars[@]}"; do
     if [[ -z ${!required_var} ]]; then
         error=1
@@ -65,7 +65,7 @@ ip="$new_ip"
 echo "IP: $ip"
 
 # Fetches the zone information for the account
-zone_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=$ZONE" \
+zone_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones" \
         -H "X-Auth-Email: $EMAIL" \
         -H "X-Auth-Key: $API" \
         -H "Content-Type: application/json")
@@ -79,7 +79,7 @@ if [[ $(jq <<<"$zone_response" -r '.success') != "true" ]]; then
 fi
 
 # Selects the zone id
-zone_id=$(jq <<<"$zone_response" -r ".result[0].id")
+zone_id=$(jq <<<"$zone_response" -r ".result[] | select(.name=='$HOST') .id")
 
 
 # If no zone id was found for the account, errors out.
@@ -93,9 +93,9 @@ echo "Zone $ZONE id : $zone_id"
 
 # Tries to fetch the record of the host
 dns_record_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?name=$HOST" \
-        -H "X-Auth-Email: $EMAIL" \
-        -H "X-Auth-Key: $API" \
-        -H "Content-Type: application/json")
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H 'Accept: application/json' \
+  -H "Content-Type: application/json")
 
 if [[ $(jq <<<"$dns_record_response" -r '.success') != "true" ]]; then
     messages=$(jq <<<"$dns_record_response" -r '[.errors[] | .message] |join(" - ")')
@@ -137,19 +137,19 @@ if [[ -z $dns_record_id ]]; then
     echo "Creating new record for host $HOST"
 
     dns_record_response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records" \
-            -H "X-Auth-Email: $EMAIL" \
-            -H "X-Auth-Key: $API" \
-            -H "Content-Type: application/json" \
-            --data "$new_dns_record")
+      -H "Authorization: Bearer ${TOKEN}" \
+      -H 'Accept: application/json' \
+      -H "Content-Type: application/json" \
+      --data "$new_dns_record")
 else
     # If a record is found, updates the existing record
     echo "Updating record $dns_record_id for host $HOST"
 
     dns_record_response=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/$dns_record_id" \
-            -H "X-Auth-Email: $EMAIL" \
-            -H "X-Auth-Key: $API" \
-            -H "Content-Type: application/json" \
-            --data "$new_dns_record")
+      -H "Authorization: Bearer ${TOKEN}" \
+      -H 'Accept: application/json' \
+      -H "Content-Type: application/json" \
+      --data "$new_dns_record")
 fi
 
 if [[  $(jq <<<"$dns_record_response" -r '.success') = "true" ]]; then
