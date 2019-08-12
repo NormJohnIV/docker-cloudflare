@@ -79,7 +79,7 @@ if [[ $(jq <<<"$zone_response" -r '.success') != "true" ]]; then
 fi
 
 # Selects the zone id
-zone_id=$(jq <<<"$zone_response" -r ".result[] | select(.name=='$HOST') .id")
+zone_id=$(jq <<<"$zone_response" -r ".result[] | select(.name==\"$ZONE\") .id")
 
 
 # If no zone id was found for the account, errors out.
