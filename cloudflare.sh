@@ -66,9 +66,9 @@ echo "IP: $ip"
 
 # Fetches the zone information for the account
 zone_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones" \
-        -H "X-Auth-Email: $EMAIL" \
-        -H "X-Auth-Key: $API" \
-        -H "Content-Type: application/json")
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H 'Accept: application/json' \
+  -H "Content-Type: application/json")
 
 
 # If not successful, errors out
